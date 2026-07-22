@@ -1,0 +1,102 @@
+### Sugestão de Caminho e Nome do Arquivo
+
+**Caminho:** `C:\Users\arsx_\Documents\DBA\dba-education-lab\02-setup-ambiente\scripts-automacao\`
+
+**Arquivo:** `lab-18-automacao-de-backup-via-batch-mysql8.md`
+
+```markdown
+# DBA EDUCATION LAB - AUTOMAÇÃO DE BACKUP LÓGICO VIA BATCH (.BAT) NO MYSQL 8.X
+
+**Autor:** Arley Ribeiro (DBA Júnior)  
+**Objetivo:** Roteiro prático e higienizado para criação, execução e agendamento de scripts de automação em lote Batch (.bat) no Windows. O script realiza a extração do timestamp atual do S.O., executa o backup lógico (`mysqldump`) utilizando arquivo de configuração seguro (`--defaults-extra-file`), realiza a compactação `.zip` via 7-Zip e limpa os arquivos temporários não compactados.  
+**Referências:** MySQL 8.0 Reference Manual / mysqldump & Windows Command Shell (cmd.exe)  
+
+---
+
+## PARTE 1: ARQUIVO DE CONFIGURAÇÃO SEGURO (C:\mysqlapoio\config.cnf)
+
+Para evitar a exposição de credenciais em texto claro dentro do script Batch e prevenir alertas de segurança do MySQL no Prompt de Comando, crie ou reutilize o arquivo `config.cnf`:
+
+```ini
+[mysqldump]
+user=arleyribeiro
+password=Arley@2026!MySQLPass
+
+```
+
+---
+
+## PARTE 2: SCRIPT BATCH OTIMIZADO (C:\mysqlapoio\backupdb_batch.bat)
+
+Script em lote adaptado para boas práticas de segurança, formato ANSI/ISO de data/hora (`YYYYMMDD_HHMM`) e suporte a arquivo de opções do MySQL:
+
+```cmd
+@echo off
+REM ===============================================================================
+REM  ARQUIVO     : backupdb_batch.bat
+REM  OBJETIVO    : Backup Lógico via CMD/WMIC + Compactação 7-Zip + Cleanup
+REM  AUTOR       : Arley Ribeiro
+REM ===============================================================================
+
+REM Obter data e hora do sistema operacional via WMIC no formato ISO
+for /f "tokens=2 delims==" %%a in ('wmic OS Get localdatetime /value') do set "dt=%%a"
+set "YYYY=%dt:~0,4%"
+set "MM=%dt:~4,2%"
+set "DD=%dt:~6,2%"
+set "HH=%dt:~8,2%"
+set "Min=%dt:~10,2%"
+
+set "timestamp=%YYYY%%MM%%DD%_%HH%%Min%"
+
+REM Definição das variáveis de ambiente e diretórios de trabalho
+set "workdir=C:\mysqlapoio\backups"
+set "configfile=C:\mysqlapoio\config.cnf"
+set "mysqldb=arley_cliente2"
+set "dumpfile=%workdir%\bk_%mysqldb%_%timestamp%.sql"
+set "zipfile=%workdir%\bk_%mysqldb%_%timestamp%.zip"
+
+REM Garantir a existência do diretório de destino
+if not exist "%workdir%" mkdir "%workdir%"
+
+REM Executar o backup lógico utilizando a chave de configuração segura
+mysqldump.exe --defaults-extra-file="%configfile%" --single-transaction --flush-logs --routines --events %mysqldb% > "%dumpfile%"
+
+REM Compactar o arquivo SQL utilizando o 7-Zip (formato ZIP)
+7z.exe a -tzip "%zipfile%" "%dumpfile%"
+
+REM Remover o arquivo SQL não compactado
+if exist "%zipfile%" del /q /f "%dumpfile%"
+
+echo Backup finalizado com sucesso: %zipfile%
+
+```
+
+---
+
+## PARTE 3: AGENDAMENTO DE TAREFAS NO WINDOWS (TASK SCHEDULER)
+
+Para configurar a execução automática deste script via Prompt de Comando (`cmd.exe`) ou **Agendador de Tarefas do Windows**:
+
+```cmd
+REM Criar uma tarefa agendada diária às 23:00 rodando sob privilégios do sistema:
+schtasks /create /tn "MySQL_Backup_Batch_Arley" /tr "C:\mysqlapoio\backupdb_batch.bat" /sc daily /st 23:00 /ru "SYSTEM"
+
+```
+
+---
+
+## PARTE 4: ROTINA DE LIMPEZA E MANUTENÇÃO (CLEANUP)
+
+Comandos para remover o script e os backups de teste gerados no laboratório:
+
+```cmd
+REM Executar no Prompt de Comando (cmd.exe) como Administrador:
+del /q /f "C:\mysqlapoio\backupdb_batch.bat"
+del /q /f "C:\mysqlapoio\backups\bk_arley_cliente2_*.zip"
+schtasks /delete /tn "MySQL_Backup_Batch_Arley" /f
+
+```
+
+```
+
+```
