@@ -1,17 +1,12 @@
 /*******************************************************************************
   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
   Arquivo      : lab-17-instalacao-configuracao-oracle-linux-19c.sql
-  Objetivo     : Roteiro prático e guia de comandos para preparação do S.O. 
-                 Oracle Linux (Red Hat) focado em hospedar o Oracle Database 19c.
-                 Inclui particionamento LVM, SSH, controle de Firewall, IP estático
-                 e integração com views de monitoramento da instância.
+  Objetivo     : Roteiro prático e guia de comandos para preparação do S.O. Oracle Linux (Red Hat) focado em hospedar o Oracle Database 19c. Inclui particionamento LVM, SSH, controle de Firewall, IP estático e integração com views de monitoramento da instância.
   Autor        : Arley Ribeiro (DBA Júnior)
-  Referências  : Oracle Linux 9 Installation Guide / Database Installation Guide for Linux
+  Referências  : Oracle Database 19c Documentation
 *******************************************************************************/
 
---------------------------------------------------------------------------------
--- PARTE 1: PREPARAÇÃO DA MÁQUINA VIRTUAL E PARTICIONAMENTO LVM (S.O.)
---------------------------------------------------------------------------------
+/* PARTE 1 - PREPARAÇÃO DA MÁQUINA VIRTUAL E PARTICIONAMENTO LVM (S.O.) */
 
 /*
   REQUISITOS DA VM (VIRTUALBOX / HYPER-V):
@@ -30,9 +25,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 2: CONFIGURAÇÕES INICIAIS DO SERVIDOR E REDE NO ORACLE LINUX
---------------------------------------------------------------------------------
+/* PARTE 2 - CONFIGURAÇÕES INICIAIS DO SERVIDOR E REDE NO ORACLE LINUX */
 
 /*
   -- 1. Fazer logon no servidor como usuário Root (Terminal):
@@ -76,9 +69,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 3: CONSULTAS SQL DE VALIDAÇÃO DA INFRAESTRUTURA NO BANCO (19c)
---------------------------------------------------------------------------------
+/* PARTE 3 - CONSULTAS SQL DE VALIDAÇÃO DA INFRAESTRUTURA NO BANCO (19c) */
 
 -- Conectar como SYSDBA no Container Root
 CONNECT / AS SYSDBA;
@@ -114,3 +105,6 @@ SELECT
     name AS pdb_name, 
     open_mode 
 FROM v$pdbs;
+
+/* PARTE 99 - CLEANUP */
+-- (Não aplicável)

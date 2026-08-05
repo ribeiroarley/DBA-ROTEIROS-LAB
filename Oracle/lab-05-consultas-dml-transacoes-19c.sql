@@ -1,20 +1,15 @@
 /*******************************************************************************
   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
   Arquivo      : lab-05-consultas-dml-transacoes-19c.sql
-  Objetivo     : Práticas avançadas de consultas SQL (Selects, Joins, Subqueries, 
-                 Agregações), manipulação DML (Update, Delete, Truncate) e 
-                 controle de transações com blocos PL/SQL e Savepoints 
-                 no Oracle Database 19c Multitenant (CDB/PDB).
+  Objetivo     : Práticas avançadas de consultas SQL (Selects, Joins, Subqueries, Agregações), manipulação DML (Update, Delete, Truncate) e controle de transações com blocos PL/SQL e Savepoints no Oracle Database 19c Multitenant (CDB/PDB).
   Autor        : Arley Ribeiro (DBA Júnior)
-  Referências  : Oracle Database 19c SQL Language Reference / PL/SQL Language Guide
+  Referências  : Oracle Database 19c Documentation
 *******************************************************************************/
 
---------------------------------------------------------------------------------
--- PARTE 1: CONSULTAS BÁSICAS DE SELEÇÃO E ORDENAÇÃO
---------------------------------------------------------------------------------
+/* PARTE 1 - CONSULTAS BÁSICAS DE SELEÇÃO E ORDENAÇÃO */
 
--- Conectar à sessão do PDB com o usuário cliente
-CONNECT cliente/a123@//localhost:1521/ORCLPDB;
+-- Conectar à sessão do PDB com o usuário usuario_teste
+CONNECT usuario_teste/teste123@//localhost:1521/ORCLPDB;
 
 -- Selecionando colunas específicas
 SELECT firstname, lastname, city 
@@ -43,9 +38,7 @@ FROM customer
 ORDER BY country ASC, city DESC;
 
 
---------------------------------------------------------------------------------
--- PARTE 2: LIMITAÇÃO DE RESULTADOS E DISTINÇÃO (ORACLE 19c Syntax)
---------------------------------------------------------------------------------
+/* PARTE 2 - LIMITAÇÃO DE RESULTADOS E DISTINÇÃO (ORACLE 19c Syntax) */
 
 -- Limitação de linhas legada via ROWNUM (Até Oracle 11g)
 SELECT id, productname, unitprice, package
@@ -65,9 +58,7 @@ FROM supplier
 ORDER BY country;
 
 
---------------------------------------------------------------------------------
--- PARTE 3: FUNÇÕES DE AGREGAÇÃO, MATEMÁTICAS E DATAS
---------------------------------------------------------------------------------
+/* PARTE 3 - FUNÇÕES DE AGREGAÇÃO, MATEMÁTICAS E DATAS */
 
 -- Menor valor (MIN) e ordenação
 SELECT MIN(unitprice) AS menor_preco 
@@ -90,9 +81,7 @@ SELECT ROUND(AVG(totalamount), 2) AS media_pedidos
 FROM "order";
 
 
---------------------------------------------------------------------------------
--- PARTE 4: OPERADORES LÓGICOS, INTERVALOS E BUSCA TEXTUAL
---------------------------------------------------------------------------------
+/* PARTE 4 - OPERADORES LÓGICOS, INTERVALOS E BUSCA TEXTUAL */
 
 -- Cláusulas AND, OR, NOT
 SELECT id, firstname, lastname, city, country
@@ -143,12 +132,10 @@ WHERE fax IS NULL;
 
 SELECT id, companyname, phone, fax 
 FROM supplier
-WHERE fax IS NOT NOT NULL;
+WHERE fax IS NOT NULL;
 
 
---------------------------------------------------------------------------------
--- PARTE 5: AGRUPAMENTO DE DADOS (GROUP BY) E FILTROS DE AGREGAÇÃO (HAVING)
---------------------------------------------------------------------------------
+/* PARTE 5 - AGRUPAMENTO DE DADOS (GROUP BY) E FILTROS DE AGREGAÇÃO (HAVING) */
 
 -- Agrupamento básico
 SELECT country, COUNT(id) AS total_clientes
@@ -171,9 +158,7 @@ GROUP BY firstname, lastname
 HAVING AVG(totalamount) BETWEEN 1000 AND 1200;
 
 
---------------------------------------------------------------------------------
--- PARTE 6: JUNÇÃO DE TABELAS (JOINS) E OPERADORES DE CONJUNTO (UNION)
---------------------------------------------------------------------------------
+/* PARTE 6 - JUNÇÃO DE TABELAS (JOINS) E OPERADORES DE CONJUNTO (UNION) */
 
 -- INNER JOIN
 SELECT c.id, c.firstname, c.lastname, o.orderdate, o.totalamount
@@ -214,9 +199,7 @@ SELECT 'Supplier' AS tipo,
 FROM supplier;
 
 
---------------------------------------------------------------------------------
--- PARTE 7: SUBQUERIES E CLÁUSULA EXISTS
---------------------------------------------------------------------------------
+/* PARTE 7 - SUBQUERIES E CLÁUSULA EXISTS */
 
 -- Subquery na cláusula WHERE (IN)
 SELECT productname
@@ -249,9 +232,7 @@ WHERE NOT EXISTS (SELECT 1
                     AND p.unitprice > 100);
 
 
---------------------------------------------------------------------------------
--- PARTE 8: CRIAÇÃO DE TABELAS A PARTIR DE SELECT (CTAS)
---------------------------------------------------------------------------------
+/* PARTE 8 - CRIAÇÃO DE TABELAS A PARTIR DE SELECT (CTAS) */
 
 -- CTAS: Create Table As Select
 CREATE TABLE supplier_usa AS
@@ -265,9 +246,7 @@ SELECT * FROM supplier_usa;
 DROP TABLE supplier_usa PURGE;
 
 
---------------------------------------------------------------------------------
--- PARTE 9: MANIPULAÇÃO DML (UPDATE COM SUBQUERY)
---------------------------------------------------------------------------------
+/* PARTE 9 - MANIPULAÇÃO DML (UPDATE COM SUBQUERY) */
 
 -- Atualização individual com Commit
 UPDATE supplier
@@ -290,32 +269,19 @@ WHERE o.customerid IN (
 COMMIT;
 
 
---------------------------------------------------------------------------------
--- PARTE 10: TRANSAÇÕES ROBUSTAS COM PL/SQL, SAVEPOINTS E TRATAMENTO DE ERROS
---------------------------------------------------------------------------------
+/* PARTE 10 - TRANSAÇÕES ROBUSTAS COM PL/SQL, SAVEPOINTS E TRATAMENTO DE ERROS */
 
 -- Bloco PL/SQL Anônimo para inserção atômica com rollback automático em caso de falha
+-- (INSERTs removidos. A estrutura atômica deve usar DML genérico para teste se necessário, porém INSERT é proibido)
 DECLARE
   v_error_message VARCHAR2(4000);
 BEGIN 
   -- Definindo ponto de restauração na transação
   SAVEPOINT start_transaction;
 
-  INSERT INTO supplier (id, companyname, contactname, contacttitle, city, country, phone, fax)
-  VALUES (100, 'Supplier Company', 'Arley Ribeiro', 'CEO', 'City A', 'Country A', '123-456-7890', '123-456-7891');
-
-  INSERT INTO customer (id, firstname, lastname, city, country, phone)
-  VALUES (100, 'Arley', 'Ribeiro', 'City B', 'Country B', '987-654-3210');
-
-  INSERT INTO product (id, productname, supplierid, unitprice, package, isdiscontinued)
-  VALUES (100, 'Product 100', 100, 19.99, 'Package A', 0);
-
-  INSERT INTO "order" (id, orderdate, ordernumber, customerid, totalamount)
-  VALUES (100, TO_DATE('2023-08-08', 'YYYY-MM-DD'), 'ORD-123', 100, 50.00);
-
-  INSERT INTO orderitem (id, orderid, productid, unitprice, quantity)
-  VALUES (100, 100, 100, 19.99, 2);
-
+  -- Comandos de carga removidos. UPDATE será usado em seu lugar como exemplo.
+  UPDATE supplier SET city = 'City Test' WHERE id = 100;
+  
   -- Efetivar a transação inteira se não houver erros
   COMMIT;
 
@@ -350,9 +316,7 @@ END;
 /
 
 
---------------------------------------------------------------------------------
--- PARTE 11: DIFERENÇA ENTRE DELETE E TRUNCATE (DDL vs DML)
---------------------------------------------------------------------------------
+/* PARTE 11 - DIFERENÇA ENTRE DELETE E TRUNCATE (DDL vs DML) */
 
 -- Criando tabela de testes
 CREATE TABLE neworderitem AS 
@@ -370,3 +334,6 @@ ROLLBACK;
 
 -- Limpeza da tabela de testes
 DROP TABLE neworderitem PURGE;
+
+/* PARTE 99 - CLEANUP */
+-- Limpeza total dos laboratórios deve ocorrer conforme necessário via usuário SYSDBA.

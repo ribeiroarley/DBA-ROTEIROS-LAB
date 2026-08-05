@@ -1,14 +1,12 @@
 /*******************************************************************************
   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
   Arquivo      : lab-01-instalacao-oracle19c.sql
-  Objetivo     : Roteiro prático e comandos SQL de pós-instalação para o 
-                 Oracle Database 19c Enterprise Edition no Windows Server.
+  Objetivo     : Roteiro prático e comandos SQL de pós-instalação para o Oracle Database 19c Enterprise Edition no Windows Server.
   Autor        : Arley Ribeiro (DBA Júnior)
+  Referências  : Oracle Database 19c Documentation
 *******************************************************************************/
 
---------------------------------------------------------------------------------
--- 1. GUIA RÁPIDO DE INSTALAÇÃO NO WINDOWS (ORACLE DATABASE 19c)
---------------------------------------------------------------------------------
+/* PARTE 1 - GUIA RÁPIDO DE INSTALAÇÃO NO WINDOWS (ORACLE DATABASE 19c) */
 /*
   PASSO A PASSO NO WINDOWS SERVER:
   1. Criar o diretório do ORACLE_HOME:
@@ -35,9 +33,7 @@
      - Locais de Arquivos  : C:\app\administrator\oradata
 */
 
---------------------------------------------------------------------------------
--- 2. CONFIGURAÇÃO E TESTE DO LISTENER (PROMPT DO WINDOWS)
---------------------------------------------------------------------------------
+/* PARTE 2 - CONFIGURAÇÃO E TESTE DO LISTENER (PROMPT DO WINDOWS) */
 /*
   Executar no Prompt de Comando / PowerShell para validar o escutador (Listener):
 
@@ -61,9 +57,7 @@
   lsnrctl start
 */
 
---------------------------------------------------------------------------------
--- 3. PRIMEIRO ACESSO E VALIDAÇÕES DO BANCO DE DADOS (SQL*PLUS)
---------------------------------------------------------------------------------
+/* PARTE 3 - PRIMEIRO ACESSO E VALIDAÇÕES DO BANCO DE DADOS (SQL*PLUS) */
 
 -- Conectar via linha de comando no servidor
 -- sqlplus / as sysdba
@@ -93,9 +87,7 @@ SELECT
     restricted 
 FROM v$pdbs;
 
---------------------------------------------------------------------------------
--- 4. ABRIR E CONFIGURAR O PDB PARA INICIALIZAÇÃO AUTOMÁTICA
---------------------------------------------------------------------------------
+/* PARTE 4 - ABRIR E CONFIGURAR O PDB PARA INICIALIZAÇÃO AUTOMÁTICA */
 
 -- Alterar a sessão para trabalhar dentro do PDB padrão
 ALTER SESSION SET CONTAINER = ORCLPDB;
@@ -109,9 +101,7 @@ ALTER SESSION SET CONTAINER = CDB$ROOT;
 -- Salvar o estado do PDB para que abra automaticamente no STARTUP do banco
 ALTER PLUGGABLE DATABASE ALL SAVE STATE;
 
---------------------------------------------------------------------------------
--- 5. VERIFICAÇÃO DE SERVIÇOS E CONEXÃO EXTERNA (SQL DEVELOPER)
---------------------------------------------------------------------------------
+/* PARTE 5 - VERIFICAÇÃO DE SERVIÇOS E CONEXÃO EXTERNA (SQL DEVELOPER) */
 
 -- Listar os nomes de serviços ativos para conexão de clientes
 SELECT 
@@ -131,9 +121,7 @@ FROM v$active_services;
   - Nome Servico : ORCLPDB (para conectar no PDB) ou ORCL (para o CDB)
 */
 
---------------------------------------------------------------------------------
--- 6. ROTINA DE DESLIGAMENTO E INICIALIZAÇÃO SEGURA (LABORATÓRIO)
---------------------------------------------------------------------------------
+/* PARTE 6 - ROTINA DE DESLIGAMENTO E INICIALIZAÇÃO SEGURA (LABORATÓRIO) */
 
 -- Procedimento para Desligar o Banco de Dados com segurança antes de fechar a VM
 CONNECT / AS SYSDBA;
@@ -146,3 +134,6 @@ STARTUP;
 
 -- Garantir que todos os PDBs estejam abertos após o startup
 ALTER PLUGGABLE DATABASE ALL OPEN;
+
+/* PARTE 99 - CLEANUP */
+-- (Nenhum objeto criado que necessite drop neste laboratório)

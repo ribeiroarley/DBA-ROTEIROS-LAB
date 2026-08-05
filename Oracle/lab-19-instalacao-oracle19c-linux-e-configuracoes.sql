@@ -1,17 +1,12 @@
 /*******************************************************************************
   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
   Arquivo      : lab-19-instalacao-oracle19c-linux-e-configuracoes.sql
-  Objetivo     : Roteiro prático para instalação e pós-instalação do Oracle Database 19c
-                 no Oracle Linux (Red Hat). Cobre pré-requisitos (RPM Preinstall),
-                 criação de diretórios/grupos, configuração de variáveis de ambiente,
-                 gerenciamento de Swap, Listener, inicialização via Systemd, RMAN e EM Express.
+  Objetivo     : Roteiro prático para instalação e pós-instalação do Oracle Database 19c no Oracle Linux (Red Hat). Cobre pré-requisitos (RPM Preinstall), criação de diretórios/grupos, configuração de variáveis de ambiente, gerenciamento de Swap, Listener, inicialização via Systemd, RMAN e EM Express.
   Autor        : Arley Ribeiro (DBA Júnior)
-  Referências  : Oracle Database Installation Guide 19c for Linux / Administrator's Guide
+  Referências  : Oracle Database 19c Documentation
 *******************************************************************************/
 
---------------------------------------------------------------------------------
--- PARTE 1: PRÉ-REQUISITOS DO S.O., GRUPOS E ESTRUTURA DE DIRETÓRIOS (ROOT)
---------------------------------------------------------------------------------
+/* PARTE 1 - PRÉ-REQUISITOS DO S.O., GRUPOS E ESTRUTURA DE DIRETÓRIOS (ROOT) */
 
 /*
   -- 1. Instalar o pacote de pré-instalação do Oracle Database 19c (Cria usuário oracle e grupos):
@@ -42,9 +37,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 2: GERENCIAMENTO E EXPANSÃO DO ESPAÇO DE SWAP (ROOT)
---------------------------------------------------------------------------------
+/* PARTE 2 - GERENCIAMENTO E EXPANSÃO DO ESPAÇO DE SWAP (ROOT) */
 
 /*
   -- Verificar o tamanho atual do Swap:
@@ -63,9 +56,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 3: VARIÁVEIS DE AMBIENTE DO SISTEMA (ORACLE / PROFILE)
---------------------------------------------------------------------------------
+/* PARTE 3 - VARIÁVEIS DE AMBIENTE DO SISTEMA (ORACLE / PROFILE) */
 
 /*
   -- Configurar variáveis globais em /etc/profile.d/oracle.sh (Executar como Root):
@@ -83,9 +74,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 4: EXTRAÇÃO DOS BINÁRIOS E EXECUÇÃO DO INSTALADOR (USUÁRIO ORACLE)
---------------------------------------------------------------------------------
+/* PARTE 4 - EXTRAÇÃO DOS BINÁRIOS E EXECUÇÃO DO INSTALADOR (USUÁRIO ORACLE) */
 
 /*
   -- Conectar como usuário oracle e descompactar o instalador direto no ORACLE_HOME:
@@ -109,9 +98,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 5: CONFIGURAÇÃO DO LISTENER E CRIAÇÃO DA BASE VIA DBCA
---------------------------------------------------------------------------------
+/* PARTE 5 - CONFIGURAÇÃO DO LISTENER E CRIAÇÃO DA BASE VIA DBCA */
 
 /*
   -- 1. Configurar o Listener via assistente 'netca' (Usuário Oracle):
@@ -137,9 +124,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 6: AUTOMAÇÃO DE INICIALIZAÇÃO VIA SYSTEMD E ORATAB (ROOT)
---------------------------------------------------------------------------------
+/* PARTE 6 - AUTOMAÇÃO DE INICIALIZAÇÃO VIA SYSTEMD E ORATAB (ROOT) */
 
 /*
   -- 1. Atualizar o arquivo /etc/oratab para permitir inicialização automática:
@@ -185,9 +170,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 7: COMANDOS SQL DE VALIDAÇÃO, ABERTURA E CONFIGURAÇÃO DO PDB
---------------------------------------------------------------------------------
+/* PARTE 7 - COMANDOS SQL DE VALIDAÇÃO, ABERTURA E CONFIGURAÇÃO DO PDB */
 
 -- Conectar como SYSDBA via SQL*Plus
 CONNECT / AS SYSDBA;
@@ -206,29 +189,27 @@ ALTER PLUGGABLE DATABASE ORCLPDB1LINUX SAVE STATE;
 ALTER SESSION SET CONTAINER = ORCLPDB1LINUX;
 
 -- Criar usuário local de testes e conceder privilégios
-CREATE USER arleyribeiro IDENTIFIED BY "Arley123" CONTAINER=CURRENT;
-GRANT CONNECT, RESOURCE, DBA TO arleyribeiro CONTAINER=CURRENT;
-ALTER USER arleyribeiro QUOTA UNLIMITED ON users;
+CREATE USER usuario_teste_secundario IDENTIFIED BY "Teste123" CONTAINER=CURRENT;
+GRANT CONNECT, RESOURCE, DBA TO usuario_teste_secundario CONTAINER=CURRENT;
+ALTER USER usuario_teste_secundario QUOTA UNLIMITED ON users;
 
 -- Testar criação de estrutura no PDB
-CREATE TABLE arleyribeiro.minha_tabela1 (
+CREATE TABLE usuario_teste_secundario.minha_tabela1 (
     id    NUMBER PRIMARY KEY,
     nome  VARCHAR2(50),
     idade NUMBER
 );
 
-INSERT INTO arleyribeiro.minha_tabela1 VALUES (1, 'Arley Ribeiro', 25);
+-- Comandos de carga removidos (Sem INSERTs)
 COMMIT;
 
-SELECT * FROM arleyribeiro.minha_tabela1;
+SELECT * FROM usuario_teste_secundario.minha_tabela1;
 
 -- Retornar ao CDB Root
 ALTER SESSION SET CONTAINER = CDB$ROOT;
 
 
---------------------------------------------------------------------------------
--- PARTE 8: CONFIGURAÇÃO DO ENTERPRISE MANAGER EXPRESS (EM EXPRESS)
---------------------------------------------------------------------------------
+/* PARTE 8 - CONFIGURAÇÃO DO ENTERPRISE MANAGER EXPRESS (EM EXPRESS) */
 
 -- Verificar porta HTTPS configurada para o CDB Root (Padrão: 5500)
 SELECT dbms_xdb_config.getHttpsPort() FROM dual;
@@ -249,9 +230,7 @@ ALTER SESSION SET CONTAINER = CDB$ROOT;
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 9: EXECUÇÃO DE BACKUP FULL VIA RMAN
---------------------------------------------------------------------------------
+/* PARTE 9 - EXECUÇÃO DE BACKUP FULL VIA RMAN */
 
 /*
   -- Executar no terminal do Linux logado como usuário 'oracle':
@@ -264,3 +243,8 @@ ALTER SESSION SET CONTAINER = CDB$ROOT;
   LIST BACKUP SUMMARY;
   EXIT;
 */
+
+/* PARTE 99 - CLEANUP */
+-- CONNECT / AS SYSDBA;
+-- ALTER SESSION SET CONTAINER = ORCLPDB1LINUX;
+-- DROP USER usuario_teste_secundario CASCADE;

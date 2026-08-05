@@ -1,16 +1,12 @@
 /*******************************************************************************
   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
   Arquivo      : lab-18-administracao-oracle-linux-comandos-19c.sql
-  Objetivo     : Guia de referência técnica e operacional no Oracle Linux (Red Hat)
-                 voltado para a rotina de um DBA Oracle 19c (Navegação, Permissões,
-                 Gestão de Usuários, Processos, Monitoramento e Integração com CDB/PDB).
+  Objetivo     : Guia de referência técnica e operacional no Oracle Linux (Red Hat) voltado para a rotina de um DBA Oracle 19c (Navegação, Permissões, Gestão de Usuários, Processos, Monitoramento e Integração com CDB/PDB).
   Autor        : Arley Ribeiro (DBA Júnior)
-  Referências  : Oracle Linux 9 System Administration Guide / Database Installation Guide
+  Referências  : Oracle Database 19c Documentation
 *******************************************************************************/
 
---------------------------------------------------------------------------------
--- PARTE 1: NAVEGAÇÃO, DIRETÓRIOS E MANIPULAÇÃO DE ARQUIVOS (S.O. LINUX)
---------------------------------------------------------------------------------
+/* PARTE 1 - NAVEGAÇÃO, DIRETÓRIOS E MANIPULAÇÃO DE ARQUIVOS (S.O. LINUX) */
 
 /*
   -- Exibir o diretório atual de trabalho:
@@ -46,9 +42,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 2: GERENCIAMENTO DE USUÁRIOS, GRUPOS E PROPRIEDADE (CHOWN / CHMOD)
---------------------------------------------------------------------------------
+/* PARTE 2 - GERENCIAMENTO DE USUÁRIOS, GRUPOS E PROPRIEDADE (CHOWN / CHMOD) */
 
 /*
   -- Estrutura de permissões (ls -l):
@@ -62,16 +56,16 @@
   -- +----------------------> Tipo (- = arquivo, d = diretório)
 
   -- Criar usuário do sistema e associar ao grupo root / oinstall:
-  sudo useradd arleyribeiro
-  sudo passwd arleyribeiro
-  sudo usermod -aG root arleyribeiro
-  groups arleyribeiro
+  sudo useradd usuario_teste
+  sudo passwd usuario_teste
+  sudo usermod -aG root usuario_teste
+  groups usuario_teste
 
-  -- Alteração de propriedade (chown) para o usuário arleyribeiro:
+  -- Alteração de propriedade (chown) para o usuário usuario_teste:
   touch /home/texto.txt
-  chown arleyribeiro /home/texto.txt
-  chown arleyribeiro:root /home/texto.txt
-  chown -R arleyribeiro:oinstall /u01/app/oracle
+  chown usuario_teste /home/texto.txt
+  chown usuario_teste:root /home/texto.txt
+  chown -R usuario_teste:oinstall /u01/app/oracle
 
   -- Alteração de permissões via modo octal (chmod):
   -- 7 = rwx (Ler, Gravar, Executar), 6 = rw (Ler, Gravar), 4 = r (Apenas Ler)
@@ -80,9 +74,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 3: BUSCA DE ARQUIVOS, FILTROS E MONITORAMENTO EM TEMPO REAL
---------------------------------------------------------------------------------
+/* PARTE 3 - BUSCA DE ARQUIVOS, FILTROS E MONITORAMENTO EM TEMPO REAL */
 
 /*
   -- Localizar arquivos de banco de dados ou logs no sistema de arquivos:
@@ -104,9 +96,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 4: MONITORAMENTO DE RECURSOS DO SISTEMA OPERACIONAL (CPU/RAM/DISCO)
---------------------------------------------------------------------------------
+/* PARTE 4 - MONITORAMENTO DE RECURSOS DO SISTEMA OPERACIONAL (CPU/RAM/DISCO) */
 
 /*
   -- Verificar espaço em disco e pontos de montagem:
@@ -125,9 +115,7 @@
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 5: INTEGRAÇÃO LINUX X ORACLE DATABASE 19c (SQL*PLUS)
---------------------------------------------------------------------------------
+/* PARTE 5 - INTEGRAÇÃO LINUX X ORACLE DATABASE 19c (SQL*PLUS) */
 
 -- Conectar como SYSDBA na instância Oracle 19c
 CONNECT / AS SYSDBA;
@@ -167,3 +155,6 @@ SELECT
     name AS pdb_name, 
     open_mode 
 FROM v$pdbs;
+
+/* PARTE 99 - CLEANUP */
+-- (Não aplicável)

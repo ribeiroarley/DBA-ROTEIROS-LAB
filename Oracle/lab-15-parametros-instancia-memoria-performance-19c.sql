@@ -1,17 +1,12 @@
 /*******************************************************************************
   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
   Arquivo      : lab-15-parametros-instancia-memoria-performance-19c.sql
-  Objetivo     : Roteiro prático para gestão de Parâmetros de Inicialização (PFILE e SPFILE),
-                 Arquitetura de Memória (AMM vs ASMM), Ajuste do Log Buffer, Diagnóstico
-                 de Eventos de Espera (Wait Events) e Execução Paralela (Parallelism)
-                 no Oracle Database 19c Multitenant (CDB/PDB).
+  Objetivo     : Roteiro prático para gestão de Parâmetros de Inicialização (PFILE e SPFILE), Arquitetura de Memória (AMM vs ASMM), Ajuste do Log Buffer, Diagnóstico de Eventos de Espera (Wait Events) e Execução Paralela (Parallelism) no Oracle Database 19c Multitenant (CDB/PDB).
   Autor        : Arley Ribeiro (DBA Júnior)
-  Referências  : Oracle Database 19c Database Administrator's Guide / Database Performance Tuning Guide
+  Referências  : Oracle Database 19c Documentation
 *******************************************************************************/
 
---------------------------------------------------------------------------------
--- PARTE 1: GESTÃO E MANIPULAÇÃO DE PFILE E SPFILE
---------------------------------------------------------------------------------
+/* PARTE 1 - GESTÃO E MANIPULAÇÃO DE PFILE E SPFILE */
 
 -- Conectar como SYSDBA no Container Root (CDB$ROOT)
 CONNECT / AS SYSDBA;
@@ -38,9 +33,7 @@ FROM SPFILE;
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 2: GERENCIAMENTO DE MEMÓRIA (AMM vs ASMM)
---------------------------------------------------------------------------------
+/* PARTE 2 - GERENCIAMENTO DE MEMÓRIA (AMM vs ASMM) */
 
 -- Consultar alocação atual de memória (AMM e ASMM) em MBytes
 SELECT name, ROUND(value / 1024 / 1024, 2) AS value_mb
@@ -85,9 +78,7 @@ ALTER SYSTEM SET pga_aggregate_target = 2000M SCOPE=SPFILE;
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 3: OTIMIZAÇÃO DE REDO LOG BUFFER E WAIT EVENTS DE I/O
---------------------------------------------------------------------------------
+/* PARTE 3 - OTIMIZAÇÃO DE REDO LOG BUFFER E WAIT EVENTS DE I/O */
 
 -- Consultar tamanho atual do Log Buffer
 SHOW PARAMETER log_buffer;
@@ -112,9 +103,7 @@ FROM v$sysstat
 WHERE name IN ('redo log space requests', 'redo buffer allocation retries', 'redo log space wait time');
 
 
---------------------------------------------------------------------------------
--- PARTE 4: CONFIGURAÇÃO DE EXECUÇÃO PARALELA (PARALLELISM)
---------------------------------------------------------------------------------
+/* PARTE 4 - CONFIGURAÇÃO DE EXECUÇÃO PARALELA (PARALLELISM) */
 
 -- Consultar política atual de grau de paralelismo
 SELECT name, value FROM v$parameter WHERE name = 'parallel_degree_policy';
@@ -133,44 +122,45 @@ ALTER SESSION DISABLE PARALLEL QUERY;
 ALTER SESSION DISABLE PARALLEL DML;
 
 
---------------------------------------------------------------------------------
--- PARTE 5: PARALELISMO EM NÍVEL DE OBJETOS (TABELAS E ÍNDICES)
---------------------------------------------------------------------------------
+/* PARTE 5 - PARALELISMO EM NÍVEL DE OBJETOS (TABELAS E ÍNDICES) */
 
 -- Alternar para o PDB de trabalho
 ALTER SESSION SET CONTAINER = ORCLPDB;
 
 -- Criar ambiente de teste no PDB
-CREATE USER arleyribeiro IDENTIFIED BY "arley123" CONTAINER=CURRENT;
-GRANT CONNECT, RESOURCE TO arleyribeiro CONTAINER=CURRENT;
-ALTER USER arleyribeiro QUOTA UNLIMITED ON users;
+CREATE USER usuario_teste IDENTIFIED BY "teste123" CONTAINER=CURRENT;
+GRANT CONNECT, RESOURCE TO usuario_teste CONTAINER=CURRENT;
+ALTER USER usuario_teste QUOTA UNLIMITED ON users;
 
-CREATE TABLE arleyribeiro.tb_perf_test (
+CREATE TABLE usuario_teste.tb_perf_test (
     id   NUMBER PRIMARY KEY,
     nome VARCHAR2(50),
     data DATE
 );
 
-CREATE INDEX arleyribeiro.idx_tb_perf_nome ON arleyribeiro.tb_perf_test(nome);
+CREATE INDEX usuario_teste.idx_tb_perf_nome ON usuario_teste.tb_perf_test(nome);
 
 -- Configurar grau de paralelismo explícito para Tabela e Índice
-ALTER TABLE arleyribeiro.tb_perf_test PARALLEL (DEGREE 4);
-ALTER INDEX arleyribeiro.idx_tb_perf_nome PARALLEL (DEGREE 4);
+ALTER TABLE usuario_teste.tb_perf_test PARALLEL (DEGREE 4);
+ALTER INDEX usuario_teste.idx_tb_perf_nome PARALLEL (DEGREE 4);
 
 -- Consultar grau de paralelismo atribuído aos objetos
-SELECT table_name, degree FROM dba_tables WHERE owner = 'ARLEYRIBEIRO' AND table_name = 'TB_PERF_TEST';
-SELECT index_name, degree FROM dba_indexes WHERE owner = 'ARLEYRIBEIRO' AND index_name = 'IDX_TB_PERF_NOME';
+SELECT table_name, degree FROM dba_tables WHERE owner = 'USUARIO_TESTE' AND table_name = 'TB_PERF_TEST';
+SELECT index_name, degree FROM dba_indexes WHERE owner = 'USUARIO_TESTE' AND index_name = 'IDX_TB_PERF_NOME';
 
 -- Remover paralelismo dos objetos (Retornar ao padrão NOPARALLEL / DEGREE 1)
-ALTER TABLE arleyribeiro.tb_perf_test NOPARALLEL;
-ALTER INDEX arleyribeiro.idx_tb_perf_nome NOPARALLEL;
+ALTER TABLE usuario_teste.tb_perf_test NOPARALLEL;
+ALTER INDEX usuario_teste.idx_tb_perf_nome NOPARALLEL;
 
 
---------------------------------------------------------------------------------
--- PARTE 6: LIMPEZA DOS OBJETOS DO LABORATÓRIO (CLEANUP)
---------------------------------------------------------------------------------
+/* PARTE 6 - LIMPEZA DOS OBJETOS DO LABORATÓRIO (CLEANUP) */
 
 CONNECT / AS SYSDBA;
 ALTER SESSION SET CONTAINER = ORCLPDB;
 
-DROP USER arleyribeiro CASCADE;
+DROP USER usuario_teste CASCADE;
+
+/* PARTE 99 - CLEANUP */
+-- CONNECT / AS SYSDBA;
+-- ALTER SESSION SET CONTAINER = ORCLPDB;
+-- DROP USER usuario_teste CASCADE;

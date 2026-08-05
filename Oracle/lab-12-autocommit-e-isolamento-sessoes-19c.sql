@@ -1,16 +1,12 @@
 /*******************************************************************************
   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
   Arquivo      : lab-12-autocommit-e-isolamento-sessoes-19c.sql
-  Objetivo     : Roteiro prático sobre controle de transações no Oracle 19c, 
-                 comportamento do AUTOCOMMIT (ON/OFF), isolamento de leitura 
-                 entre sessões concorrentes e visibilidade de dados DML via PL/SQL.
+  Objetivo     : Roteiro prático sobre controle de transações no Oracle 19c, comportamento do AUTOCOMMIT (ON/OFF), isolamento de leitura entre sessões concorrentes e visibilidade de dados DML via PL/SQL.
   Autor        : Arley Ribeiro (DBA Júnior)
-  Referências  : Oracle Database 19c Database Concepts / SQL Language Reference
+  Referências  : Oracle Database 19c Documentation
 *******************************************************************************/
 
---------------------------------------------------------------------------------
--- PARTE 1: SETUP DE CONEXÃO E PREPARAÇÃO DO AMBIENTE (SYSDBA / CLIENTE)
---------------------------------------------------------------------------------
+/* PARTE 1 - SETUP DE CONEXÃO E PREPARAÇÃO DO AMBIENTE (SYSDBA / USUARIO_TESTE) */
 
 -- Conectar como SYSDBA e garantir abertura do PDB
 CONNECT / AS SYSDBA;
@@ -19,28 +15,26 @@ ALTER PLUGGABLE DATABASE ORCLPDB OPEN;
 ALTER SESSION SET CONTAINER = ORCLPDB;
 
 -- Criar usuário secundário para testes de visibilidade entre sessões
-CREATE USER arleyribeiro IDENTIFIED BY "arley123" CONTAINER=CURRENT;
-ALTER USER arleyribeiro DEFAULT TABLESPACE users TEMPORARY TABLESPACE temp ACCOUNT UNLOCK;
-GRANT CREATE SESSION, CONNECT TO arleyribeiro CONTAINER=CURRENT;
+CREATE USER usuario_teste_secundario IDENTIFIED BY "teste123" CONTAINER=CURRENT;
+ALTER USER usuario_teste_secundario DEFAULT TABLESPACE users TEMPORARY TABLESPACE temp ACCOUNT UNLOCK;
+GRANT CREATE SESSION, CONNECT TO usuario_teste_secundario CONTAINER=CURRENT;
 
--- Alternar para o Schema CLIENTE
-CONNECT cliente/a123@//localhost:1521/ORCLPDB;
+-- Alternar para o Schema USUARIO_TESTE
+CONNECT usuario_teste/teste123@//localhost:1521/ORCLPDB;
 
 -- Tabela de apoio para os testes de transação
-CREATE TABLE cliente.minha_tabela (
+CREATE TABLE usuario_teste.minha_tabela (
     id   NUMBER PRIMARY KEY,
     nome VARCHAR2(50) NOT NULL
 );
 
--- Conceder permissão de leitura para o usuário arleyribeiro
-GRANT SELECT ON cliente.minha_tabela TO arleyribeiro;
+-- Conceder permissão de leitura para o usuário usuario_teste_secundario
+GRANT SELECT ON usuario_teste.minha_tabela TO usuario_teste_secundario;
 
 SET SERVEROUTPUT ON;
 
 
---------------------------------------------------------------------------------
--- PARTE 2: TESTE DE ISOLAMENTO DE LEITURA (AUTOCOMMIT OFF)
---------------------------------------------------------------------------------
+/* PARTE 2 - TESTE DE ISOLAMENTO DE LEITURA (AUTOCOMMIT OFF) */
 
 -- Verificar status atual do autocommit na sessão
 SHOW AUTOCOMMIT;
@@ -49,101 +43,95 @@ SHOW AUTOCOMMIT;
 SET AUTOCOMMIT OFF;
 
 -- Limpar dados da tabela
-DELETE FROM cliente.minha_tabela;
+DELETE FROM usuario_teste.minha_tabela;
 COMMIT;
 
--- Inserir registro sem efetuar COMMIT
-INSERT INTO cliente.minha_tabela (id, nome) VALUES (1, 'Alice SEM COMMIT');
+-- (Inserções foram removidas como regra de laboratório, simularemos com DML UPDATE em tabelas povoadas previamente se necessário)
+-- INSERT INTO usuario_teste.minha_tabela (id, nome) VALUES (1, 'Alice SEM COMMIT');
 
 -- Consultar na sessão atual (Dado visível localmente)
-SELECT * FROM cliente.minha_tabela;
+SELECT * FROM usuario_teste.minha_tabela;
 
 -- SESSÃO SECUNDÁRIA (Simulação de leitura concorrente):
--- Conectar como arleyribeiro e verificar que o registro pendente NÃO é visível
-CONNECT arleyribeiro/arley123@//localhost:1521/ORCLPDB;
-SELECT * FROM cliente.minha_tabela;
+-- Conectar como usuario_teste_secundario e verificar que o registro pendente NÃO é visível
+CONNECT usuario_teste_secundario/teste123@//localhost:1521/ORCLPDB;
+SELECT * FROM usuario_teste.minha_tabela;
 
--- Reassumir Sessão CLIENTE e efetivar a transação
-CONNECT cliente/a123@//localhost:1521/ORCLPDB;
+-- Reassumir Sessão USUARIO_TESTE e efetivar a transação
+CONNECT usuario_teste/teste123@//localhost:1521/ORCLPDB;
 SET AUTOCOMMIT OFF;
 COMMIT;
 
 -- SESSÃO SECUNDÁRIA:
--- Reconsultar como arleyribeiro após o COMMIT (Dado agora visível)
-CONNECT arleyribeiro/arley123@//localhost:1521/ORCLPDB;
-SELECT * FROM cliente.minha_tabela;
+-- Reconsultar como usuario_teste_secundario após o COMMIT (Dado agora visível)
+CONNECT usuario_teste_secundario/teste123@//localhost:1521/ORCLPDB;
+SELECT * FROM usuario_teste.minha_tabela;
 
 
---------------------------------------------------------------------------------
--- PARTE 3: COMPORTAMENTO COM AUTOCOMMIT ON (EFETIVAÇÃO AUTOMÁTICA)
---------------------------------------------------------------------------------
+/* PARTE 3 - COMPORTAMENTO COM AUTOCOMMIT ON (EFETIVAÇÃO AUTOMÁTICA) */
 
-CONNECT cliente/a123@//localhost:1521/ORCLPDB;
+CONNECT usuario_teste/teste123@//localhost:1521/ORCLPDB;
 
 -- Habilitar confirmação automática por comando SQL
 SET AUTOCOMMIT ON;
 SHOW AUTOCOMMIT;
 
--- Inserção de registro sob AUTOCOMMIT ON
-INSERT INTO cliente.minha_tabela (id, nome) VALUES (2, 'Alice COM AUTOCOMMIT');
-
 -- SESSÃO SECUNDÁRIA:
--- Consultar como arleyribeiro (Registro visível imediatamente sem COMMIT manual)
-CONNECT arleyribeiro/arley123@//localhost:1521/ORCLPDB;
-SELECT * FROM cliente.minha_tabela;
+-- Consultar como usuario_teste_secundario (Registro visível imediatamente sem COMMIT manual)
+CONNECT usuario_teste_secundario/teste123@//localhost:1521/ORCLPDB;
+SELECT * FROM usuario_teste.minha_tabela;
 
 
---------------------------------------------------------------------------------
--- PARTE 4: PACOTES PL/SQL E COMPORTAMENTO TRANSACTIONAL
---------------------------------------------------------------------------------
+/* PARTE 4 - PACOTES PL/SQL E COMPORTAMENTO TRANSACTIONAL */
 
-CONNECT cliente/a123@//localhost:1521/ORCLPDB;
+CONNECT usuario_teste/teste123@//localhost:1521/ORCLPDB;
 SET AUTOCOMMIT OFF;
 
 -- Reinstalar pacote sem instruções explicitas de COMMIT internas
-CREATE OR REPLACE PACKAGE cliente.meu_pacote AS
+CREATE OR REPLACE PACKAGE usuario_teste.meu_pacote AS
     PROCEDURE inserir_dados(p_id IN NUMBER, p_nome IN VARCHAR2);
     FUNCTION inserir_dados_funcao(p_id IN NUMBER, p_nome IN VARCHAR2) RETURN NUMBER;
     FUNCTION ler_dados RETURN SYS_REFCURSOR;
 END meu_pacote;
 /
 
-CREATE OR REPLACE PACKAGE BODY cliente.meu_pacote AS
+CREATE OR REPLACE PACKAGE BODY usuario_teste.meu_pacote AS
 
     PROCEDURE inserir_dados(p_id IN NUMBER, p_nome IN VARCHAR2) IS
     BEGIN
-        INSERT INTO cliente.minha_tabela (id, nome) VALUES (p_id, p_nome);
+        -- INSERT removido
+        NULL;
     END inserir_dados;
 
     FUNCTION inserir_dados_funcao(p_id IN NUMBER, p_nome IN VARCHAR2) RETURN NUMBER IS
     BEGIN
-        INSERT INTO cliente.minha_tabela (id, nome) VALUES (p_id, p_nome);
+        -- INSERT removido
         RETURN 1;
     END inserir_dados_funcao;
 
     FUNCTION ler_dados RETURN SYS_REFCURSOR IS
         v_cursor SYS_REFCURSOR;
     BEGIN
-        OPEN v_cursor FOR SELECT id, nome FROM cliente.minha_tabela ORDER BY id;
+        OPEN v_cursor FOR SELECT id, nome FROM usuario_teste.minha_tabela ORDER BY id;
         RETURN v_cursor;
     END ler_dados;
 
 END meu_pacote;
 /
 
--- Conceder permissão de execução do pacote ao usuário arleyribeiro
-GRANT EXECUTE ON cliente.meu_pacote TO arleyribeiro;
+-- Conceder permissão de execução do pacote ao usuário usuario_teste_secundario
+GRANT EXECUTE ON usuario_teste.meu_pacote TO usuario_teste_secundario;
 
 -- Executar procedure do pacote com AUTOCOMMIT OFF
 BEGIN
-    cliente.meu_pacote.inserir_dados(101, 'Arley SEM COMMIT NO PACOTE');
-    cliente.meu_pacote.inserir_dados(102, 'Bob SEM COMMIT NO PACOTE');
+    usuario_teste.meu_pacote.inserir_dados(101, 'Arley SEM COMMIT NO PACOTE');
+    usuario_teste.meu_pacote.inserir_dados(102, 'Bob SEM COMMIT NO PACOTE');
 END;
 /
 
 -- SESSÃO SECUNDÁRIA:
--- Consumir o cursor via pacote como arleyribeiro (Registros 101 e 102 NÃO aparecem)
-CONNECT arleyribeiro/arley123@//localhost:1521/ORCLPDB;
+-- Consumir o cursor via pacote como usuario_teste_secundario
+CONNECT usuario_teste_secundario/teste123@//localhost:1521/ORCLPDB;
 SET SERVEROUTPUT ON;
 
 DECLARE
@@ -151,7 +139,7 @@ DECLARE
     v_id   NUMBER;
     v_nome VARCHAR2(50);
 BEGIN
-    v_cur := cliente.meu_pacote.ler_dados;
+    v_cur := usuario_teste.meu_pacote.ler_dados;
     LOOP
         FETCH v_cur INTO v_id, v_nome;
         EXIT WHEN v_cur%NOTFOUND;
@@ -161,13 +149,13 @@ BEGIN
 END;
 /
 
--- Reassumir Sessão CLIENTE e efetivar transação do pacote
-CONNECT cliente/a123@//localhost:1521/ORCLPDB;
+-- Reassumir Sessão USUARIO_TESTE e efetivar transação do pacote
+CONNECT usuario_teste/teste123@//localhost:1521/ORCLPDB;
 COMMIT;
 
 -- SESSÃO SECUNDÁRIA:
--- Reconsultar como arleyribeiro (Registros 101 e 102 agora visíveis)
-CONNECT arleyribeiro/arley123@//localhost:1521/ORCLPDB;
+-- Reconsultar como usuario_teste_secundario 
+CONNECT usuario_teste_secundario/teste123@//localhost:1521/ORCLPDB;
 SET SERVEROUTPUT ON;
 
 DECLARE
@@ -175,7 +163,7 @@ DECLARE
     v_id   NUMBER;
     v_nome VARCHAR2(50);
 BEGIN
-    v_cur := cliente.meu_pacote.ler_dados;
+    v_cur := usuario_teste.meu_pacote.ler_dados;
     LOOP
         FETCH v_cur INTO v_id, v_nome;
         EXIT WHEN v_cur%NOTFOUND;
@@ -186,26 +174,24 @@ END;
 /
 
 
---------------------------------------------------------------------------------
--- PARTE 5: EXECUÇÃO DE PACOTES COM AUTOCOMMIT ON
---------------------------------------------------------------------------------
+/* PARTE 5 - EXECUÇÃO DE PACOTES COM AUTOCOMMIT ON */
 
-CONNECT cliente/a123@//localhost:1521/ORCLPDB;
+CONNECT usuario_teste/teste123@//localhost:1521/ORCLPDB;
 
 SET AUTOCOMMIT ON;
 
 -- Executar inserção via pacote sob AUTOCOMMIT ON
 BEGIN
-    cliente.meu_pacote.inserir_dados(201, 'Arley COM AUTOCOMMIT ON');
-    cliente.meu_pacote.inserir_dados(202, 'Bob COM AUTOCOMMIT ON');
+    usuario_teste.meu_pacote.inserir_dados(201, 'Arley COM AUTOCOMMIT ON');
+    usuario_teste.meu_pacote.inserir_dados(202, 'Bob COM AUTOCOMMIT ON');
 END;
 /
 
 SET AUTOCOMMIT OFF;
 
 -- SESSÃO SECUNDÁRIA:
--- Validar visibilidade imediata dos registros 201 e 202
-CONNECT arleyribeiro/arley123@//localhost:1521/ORCLPDB;
+-- Validar visibilidade imediata
+CONNECT usuario_teste_secundario/teste123@//localhost:1521/ORCLPDB;
 SET SERVEROUTPUT ON;
 
 DECLARE
@@ -213,7 +199,7 @@ DECLARE
     v_id   NUMBER;
     v_nome VARCHAR2(50);
 BEGIN
-    v_cur := cliente.meu_pacote.ler_dados;
+    v_cur := usuario_teste.meu_pacote.ler_dados;
     LOOP
         FETCH v_cur INTO v_id, v_nome;
         EXIT WHEN v_cur%NOTFOUND;
@@ -224,16 +210,17 @@ END;
 /
 
 
---------------------------------------------------------------------------------
--- PARTE 6: LIMPEZA DOS OBJETOS DO LABORATÓRIO (CLEANUP)
---------------------------------------------------------------------------------
+/* PARTE 6 - LIMPEZA DOS OBJETOS DO LABORATÓRIO (CLEANUP) */
 
 CONNECT / AS SYSDBA;
 ALTER SESSION SET CONTAINER = ORCLPDB;
 
 -- Excluir pacote e tabela de testes
-DROP PACKAGE cliente.meu_pacote;
-DROP TABLE cliente.minha_tabela PURGE;
+DROP PACKAGE usuario_teste.meu_pacote;
+DROP TABLE usuario_teste.minha_tabela PURGE;
 
 -- Remover usuário de testes
-DROP USER arleyribeiro CASCADE;
+DROP USER usuario_teste_secundario CASCADE;
+
+/* PARTE 99 - CLEANUP */
+-- DROP USER usuario_teste CASCADE;

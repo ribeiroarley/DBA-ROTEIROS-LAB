@@ -1,0 +1,20 @@
+# /*******************************************************************************
+#   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
+#   Arquivo      : lab-15-config.cnf
+#   Objetivo     : Arquivo central de configuracoes de credenciais para utilitarios
+#   Autor        : Arley Ribeiro (DBA Júnior)
+#   Referências  : MySQL 8.0 Reference Manual
+# *******************************************************************************/
+
+# Configuracoes de usuario para automacao
+[mysqldump]
+user=backup_user
+password=SenhaForte@123
+
+[mysqladmin]
+user=backup_user
+password=SenhaForte@123
+
+[mysqlcheck]
+user=backup_user
+password=SenhaForte@123

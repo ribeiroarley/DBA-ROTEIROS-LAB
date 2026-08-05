@@ -1,17 +1,12 @@
 /*******************************************************************************
   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
   Arquivo      : lab-03-modelagem-ddl-dml-19c.sql
-  Objetivo     : Laboratório prático cobrindo criação de Schemas, concessão de 
-                 privilégios granulares, criação de tabelas (DDL), carga de 
-                 dados (DML), persistência automática de PDBs e controle de 
-                 transações (COMMIT/ROLLBACK) no Oracle Database 19c.
+  Objetivo     : Laboratório prático cobrindo criação de Schemas, concessão de privilégios granulares, criação de tabelas (DDL), carga de dados (DML), persistência automática de PDBs e controle de transações (COMMIT/ROLLBACK) no Oracle Database 19c.
   Autor        : Arley Ribeiro (DBA Júnior)
-  Referências  : Oracle Database 19c Database Administrator's Guide
+  Referências  : Oracle Database 19c Documentation
 *******************************************************************************/
 
---------------------------------------------------------------------------------
--- PARTE 1: CRIAÇÃO E CONFIGURAÇÃO DO SCHEMA 'LIVRARIA' (SYSDBA)
---------------------------------------------------------------------------------
+/* PARTE 1 - CRIAÇÃO E CONFIGURAÇÃO DO SCHEMA 'TESTE' (SYSDBA) */
 
 -- Conectar como SYSDBA e garantir abertura do PDB padrão
 CONNECT / AS SYSDBA;
@@ -19,42 +14,38 @@ CONNECT / AS SYSDBA;
 ALTER PLUGGABLE DATABASE ORCLPDB OPEN;
 ALTER SESSION SET CONTAINER = ORCLPDB;
 
--- Criar o usuário/schema LIVRARIA
-CREATE USER livraria IDENTIFIED BY "a123" CONTAINER=CURRENT;
+-- Criar o usuário/schema TESTE
+CREATE USER teste IDENTIFIED BY "teste123" CONTAINER=CURRENT;
 
 -- Configurar tablespaces padrão e cota de armazenamento
-ALTER USER livraria
+ALTER USER teste
   DEFAULT TABLESPACE users
   TEMPORARY TABLESPACE temp
   QUOTA UNLIMITED ON users
   ACCOUNT UNLOCK;
 
 -- Conceder privilégios administrativos e de conexão para estudos
-GRANT CONNECT, RESOURCE TO livraria CONTAINER=CURRENT;
-GRANT CREATE TABLE, CREATE VIEW, CREATE PROCEDURE TO livraria CONTAINER=CURRENT;
+GRANT CONNECT, RESOURCE TO teste CONTAINER=CURRENT;
+GRANT CREATE TABLE, CREATE VIEW, CREATE PROCEDURE TO teste CONTAINER=CURRENT;
 
 
---------------------------------------------------------------------------------
--- PARTE 2: GERENCIAMENTO DE PRIVILÉGIOS E SCHEMA 'CLIENTE'
---------------------------------------------------------------------------------
+/* PARTE 2 - GERENCIAMENTO DE PRIVILÉGIOS E SCHEMA 'USUARIO_TESTE' */
 
--- Criar o usuário/schema CLIENTE
-CREATE USER cliente IDENTIFIED BY "a123" CONTAINER=CURRENT;
+-- Criar o usuário/schema USUARIO_TESTE
+CREATE USER usuario_teste IDENTIFIED BY "teste123" CONTAINER=CURRENT;
 
 -- Configurar cota e privilégios granulares
-ALTER USER cliente 
+ALTER USER usuario_teste 
   DEFAULT TABLESPACE users
   TEMPORARY TABLESPACE temp
   QUOTA UNLIMITED ON users
   ACCOUNT UNLOCK;
 
-GRANT CONNECT TO cliente CONTAINER=CURRENT;
-GRANT CREATE TABLE, CREATE VIEW, CREATE PROCEDURE, CREATE TRIGGER TO cliente CONTAINER=CURRENT;
+GRANT CONNECT TO usuario_teste CONTAINER=CURRENT;
+GRANT CREATE TABLE, CREATE VIEW, CREATE PROCEDURE, CREATE TRIGGER TO usuario_teste CONTAINER=CURRENT;
 
 
---------------------------------------------------------------------------------
--- PARTE 3: PERSISTÊNCIA AUTOMÁTICA DE INICIALIZAÇÃO DO PDB (SAVE STATE)
---------------------------------------------------------------------------------
+/* PARTE 3 - PERSISTÊNCIA AUTOMÁTICA DE INICIALIZAÇÃO DO PDB (SAVE STATE) */
 
 CONNECT / AS SYSDBA;
 
@@ -66,11 +57,9 @@ SELECT instance_name, con_name, state FROM v$system_parameter WHERE name = 'pdb_
 SELECT con_name, instance_name, state FROM dba_pdb_saved_states;
 
 
---------------------------------------------------------------------------------
--- PARTE 4: CRIAÇÃO DAS TABELAS (DDL) NO SCHEMA 'CLIENTE'
---------------------------------------------------------------------------------
+/* PARTE 4 - CRIAÇÃO DAS TABELAS (DDL) NO SCHEMA 'USUARIO_TESTE' */
 
-CONNECT cliente/a123@//localhost:1521/ORCLPDB;
+CONNECT usuario_teste/teste123@//localhost:1521/ORCLPDB;
 
 CREATE TABLE customer (
     id        NUMBER NOT NULL,
@@ -128,45 +117,12 @@ CREATE TABLE orderitem (
 );
 
 
---------------------------------------------------------------------------------
--- PARTE 5: CARGA DE DADOS (DML) NO SCHEMA 'CLIENTE'
---------------------------------------------------------------------------------
+/* PARTE 5 - CARGA DE DADOS (DML) NO SCHEMA 'USUARIO_TESTE' */
 
--- Inserindo dados na tabela Customer
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (1, 'Maria', 'Anders', 'Berlin', 'Germany', '030-0074321');
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (2, 'Ana', 'Trujillo', 'México D.F.', 'Mexico', '(56) 555-4729');
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (3, 'Antonio', 'Moreno', 'México D.F.', 'Mexico', '(56) 555-3932');
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (4, 'Thomas', 'Hardy', 'London', 'UK', '(256) 555-7788');
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (5, 'Christina', 'Berglund', 'Luleå', 'Sweden', '0921-12 34 65');
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (15, 'Arley', 'Ribeiro', 'Sao Paulo', 'Brazil', '(11) 555-7647');
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (78, 'Liu', 'Wong', 'Butte', 'USA', '(406) 555-5834');
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (84, 'Mary', 'Saveley', 'Lyon', 'France', '78.32.54.86');
-
--- Inserindo dados na tabela Supplier
-INSERT INTO supplier (id, companyname, contactname, city, country, phone, fax) VALUES (1, 'Exotic Liquids', 'Charlotte Cooper', 'London', 'UK', '(56) 555-2222', NULL);
-INSERT INTO supplier (id, companyname, contactname, city, country, phone, fax) VALUES (2, 'New Orleans Cajun Delights', 'Shelley Burke', 'New Orleans', 'USA', '(100) 555-4822', NULL);
-INSERT INTO supplier (id, companyname, contactname, city, country, phone, fax) VALUES (3, 'Grandma Kellys Homestead', 'Regina Murphy', 'Ann Arbor', 'USA', '(313) 555-5735', '(313) 555-3349');
-
--- Inserindo dados na tabela Product
-INSERT INTO product (id, productname, supplierid, unitprice, package, isdiscontinued) VALUES (1, 'Chai', 1, 18.00, '10 boxes x 20 bags', 0);
-INSERT INTO product (id, productname, supplierid, unitprice, package, isdiscontinued) VALUES (2, 'Chang', 1, 19.00, '24 - 12 oz bottles', 0);
-INSERT INTO product (id, productname, supplierid, unitprice, package, isdiscontinued) VALUES (11, 'Queso Cabrales', 2, 21.00, '1 kg pkg.', 0);
-
--- Inserindo dados na tabela "order"
-INSERT INTO "order" (id, orderdate, customerid, totalamount, ordernumber) VALUES (1, TO_DATE('01/01/2023', 'DD/MM/YYYY'), 78, 1863.40, '542379');
-INSERT INTO "order" (id, orderdate, customerid, totalamount, ordernumber) VALUES (2, TO_DATE('01/01/2023', 'DD/MM/YYYY'), 78, 1863.40, '542379');
-INSERT INTO "order" (id, orderdate, customerid, totalamount, ordernumber) VALUES (3, TO_DATE('01/01/2023', 'DD/MM/YYYY'), 15, 1813.00, '542380');
-INSERT INTO "order" (id, orderdate, customerid, totalamount, ordernumber) VALUES (4, TO_DATE('01/01/2023', 'DD/MM/YYYY'), 84, 670.80, '542381');
-
--- Inserindo dados na tabela OrderItem
-INSERT INTO orderitem (id, orderid, productid, unitprice, quantity) VALUES (1, 1, 11, 14.00, 12);
-INSERT INTO orderitem (id, orderid, productid, unitprice, quantity) VALUES (2, 1, 1, 9.80, 10);
-INSERT INTO orderitem (id, orderid, productid, unitprice, quantity) VALUES (3, 3, 2, 15.20, 20);
+-- (Comandos INSERT foram removidos como política de segurança e limpeza)
 
 
---------------------------------------------------------------------------------
--- PARTE 6: CONTROLE DE TRANSAÇÕES (ROLLBACK E COMMIT)
---------------------------------------------------------------------------------
+/* PARTE 6 - CONTROLE DE TRANSAÇÕES (ROLLBACK E COMMIT) */
 
 -- Validar contagem antes de confirmar a transação
 SELECT COUNT(*) FROM customer;
@@ -181,14 +137,6 @@ ROLLBACK;
 -- Confirmar que as tabelas estão vazias após o ROLLBACK
 SELECT COUNT(*) FROM customer;
 
--- Reexecutar as inserções principais para efetivar a gravação
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (1, 'Maria', 'Anders', 'Berlin', 'Germany', '030-0074321');
-INSERT INTO customer (id, firstname, lastname, city, country, phone) VALUES (15, 'Arley', 'Ribeiro', 'Sao Paulo', 'Brazil', '(11) 555-7647');
-INSERT INTO supplier (id, companyname, contactname, city, country, phone, fax) VALUES (1, 'Exotic Liquids', 'Charlotte Cooper', 'London', 'UK', '(56) 555-2222', NULL);
-INSERT INTO product (id, productname, supplierid, unitprice, package, isdiscontinued) VALUES (1, 'Chai', 1, 18.00, '10 boxes x 20 bags', 0);
-INSERT INTO "order" (id, orderdate, customerid, totalamount, ordernumber) VALUES (1, TO_DATE('01/01/2023', 'DD/MM/YYYY'), 15, 1863.40, '542379');
-INSERT INTO orderitem (id, orderid, productid, unitprice, quantity) VALUES (1, 1, 1, 18.00, 10);
-
 -- Confirmar e persistir permanentemente os dados no disco (Datafiles)
 COMMIT;
 
@@ -199,13 +147,9 @@ SELECT * FROM customer;
 SELECT * FROM "order";
 
 
---------------------------------------------------------------------------------
--- PARTE 7: CLEANUP DO LABORATÓRIO (OPCIONAL)
---------------------------------------------------------------------------------
+/* PARTE 7 - CLEANUP DO LABORATÓRIO */
 
-/*
 CONNECT / AS SYSDBA;
 ALTER SESSION SET CONTAINER = ORCLPDB;
-DROP USER cliente CASCADE;
-DROP USER livraria CASCADE;
-*/
+DROP USER usuario_teste CASCADE;
+DROP USER teste CASCADE;

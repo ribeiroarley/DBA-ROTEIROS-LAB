@@ -1,17 +1,12 @@
 /*******************************************************************************
   REPOSITÓRIO DE ESTUDOS - DBA EDUCATION LAB
   Arquivo      : lab-14-backup-recovery-rman-datapump-scheduler-19c.sql
-  Objetivo     : Roteiro prático de estratégias de Backup e Recovery no Oracle 19c:
-                 Configurações de RMAN, Multiplexação de Control Files, Backups Full e
-                 Incrementais (Level 0/1), Data Pump (EXPDP/IMPDP), Recovery PITR, 
-                 RMAN Catalog, e Automação de Jobs via DBMS_SCHEDULER.
+  Objetivo     : Roteiro prático de estratégias de Backup e Recovery no Oracle 19c: Configurações de RMAN, Multiplexação de Control Files, Backups Full e Incrementais (Level 0/1), Data Pump (EXPDP/IMPDP), Recovery PITR, RMAN Catalog, e Automação de Jobs via DBMS_SCHEDULER.
   Autor        : Arley Ribeiro (DBA Júnior)
-  Referências  : Oracle Database 19c Backup and Recovery User's Guide / RMAN Reference
+  Referências  : Oracle Database 19c Documentation
 *******************************************************************************/
 
---------------------------------------------------------------------------------
--- PARTE 1: CONFIGURAÇÕES INICIAIS DO RMAN E MULTIPLEXAÇÃO DE CONTROL FILES
---------------------------------------------------------------------------------
+/* PARTE 1 - CONFIGURAÇÕES INICIAIS DO RMAN E MULTIPLEXAÇÃO DE CONTROL FILES */
 
 -- Conectar via RMAN no Target (Prompt do S.O. / CMD):
 -- rman target sys/Oracle123
@@ -53,9 +48,7 @@ SCOPE=SPFILE;
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 2: COMANDOS E ESTRATÉGIAS DE BACKUP RMAN (FULL, INCREMENTAL, ARCHIVELOG)
---------------------------------------------------------------------------------
+/* PARTE 2 - COMANDOS E ESTRATÉGIAS DE BACKUP RMAN (FULL, INCREMENTAL, ARCHIVELOG) */
 
 /*
   -- Backup Full de todo o Container Database (CDB) incluindo Archivelogs:
@@ -88,9 +81,7 @@ SCOPE=SPFILE;
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 3: GERENCIAMENTO DE RETENÇÃO E MANUTENÇÃO DO CATÁLOGO RMAN
---------------------------------------------------------------------------------
+/* PARTE 3 - GERENCIAMENTO DE RETENÇÃO E MANUTENÇÃO DO CATÁLOGO RMAN */
 
 /*
   -- Definir política de retenção por Janela de Recuperação (30 dias):
@@ -111,9 +102,7 @@ SCOPE=SPFILE;
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 4: CONFIGURAÇÃO DO RECOVERY CATALOG INDEPENDENTE (RMAN_CAT)
---------------------------------------------------------------------------------
+/* PARTE 4 - CONFIGURAÇÃO DO RECOVERY CATALOG INDEPENDENTE (RMAN_CAT) */
 
 CONNECT / AS SYSDBA;
 ALTER SESSION SET CONTAINER = ORCLPDB;
@@ -124,29 +113,27 @@ CREATE TABLESPACE tbs_rman_cat
     AUTOEXTEND ON NEXT 20M MAXSIZE 2000M;
 
 -- 2. Criar Usuário do Catálogo
-CREATE USER rman_cat IDENTIFIED BY "oracle123" 
+CREATE USER c##rman_cat_teste IDENTIFIED BY "oracle123" 
     DEFAULT TABLESPACE tbs_rman_cat 
     TEMPORARY TABLESPACE temp 
     QUOTA UNLIMITED ON tbs_rman_cat;
 
 -- 3. Conceder privilégios do catálogo RMAN
-GRANT recovery_catalog_owner TO rman_cat;
-GRANT CONNECT, RESOURCE TO rman_cat;
+GRANT recovery_catalog_owner TO c##rman_cat_teste;
+GRANT CONNECT, RESOURCE TO c##rman_cat_teste;
 
 /*
   -- 4. Criar e registrar banco de dados no Catálogo (Linha de comando do S.O.):
-  rman catalog rman_cat@ORCLPDB/oracle123
+  rman catalog c##rman_cat_teste@ORCLPDB/oracle123
   RMAN> CREATE CATALOG;
   
-  rman target sys/Oracle123 catalog rman_cat@ORCLPDB/oracle123
+  rman target sys/Oracle123 catalog c##rman_cat_teste@ORCLPDB/oracle123
   RMAN> REGISTER DATABASE;
   RMAN> RESYNC CATALOG;
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 5: EXPORTAÇÃO E IMPORTAÇÃO DE SCHEMAS E TABELAS (DATA PUMP)
---------------------------------------------------------------------------------
+/* PARTE 5 - EXPORTAÇÃO E IMPORTAÇÃO DE SCHEMAS E TABELAS (DATA PUMP) */
 
 CONNECT / AS SYSDBA;
 ALTER SESSION SET CONTAINER = ORCLPDB;
@@ -155,30 +142,28 @@ ALTER SESSION SET CONTAINER = ORCLPDB;
 CREATE OR REPLACE DIRECTORY exp_schema AS 'C:\oraclebackup';
 
 -- Criar usuário dedicado para operações de Backup Data Pump
-CREATE USER backup_user IDENTIFIED BY "Arley#1234" 
+CREATE USER usuario_backup_teste IDENTIFIED BY "Teste#1234" 
     DEFAULT TABLESPACE users 
     TEMPORARY TABLESPACE temp 
     QUOTA UNLIMITED ON users;
 
-GRANT CONNECT, CREATE SESSION, RESOURCE TO backup_user;
-GRANT READ, WRITE ON DIRECTORY exp_schema TO backup_user;
-GRANT DATAPUMP_EXP_FULL_DATABASE, DATAPUMP_IMP_FULL_DATABASE TO backup_user;
+GRANT CONNECT, CREATE SESSION, RESOURCE TO usuario_backup_teste;
+GRANT READ, WRITE ON DIRECTORY exp_schema TO usuario_backup_teste;
+GRANT DATAPUMP_EXP_FULL_DATABASE, DATAPUMP_IMP_FULL_DATABASE TO usuario_backup_teste;
 
 /*
-  -- Executar Exportação do Schema "arleyribeiro" via Prompt do S.O.:
-  expdp backup_user@ORCLPDB/Arley#1234 DIRECTORY=exp_schema DUMPFILE=exp_arley_%T.dmp LOGFILE=exp_arley.log SCHEMAS=arleyribeiro
+  -- Executar Exportação do Schema "usuario_teste_secundario" via Prompt do S.O.:
+  expdp usuario_backup_teste@ORCLPDB/Teste#1234 DIRECTORY=exp_schema DUMPFILE=exp_teste_%T.dmp LOGFILE=exp_teste.log SCHEMAS=usuario_teste_secundario
 
   -- Executar Importação redirecionando para um novo Schema (Remap Schema):
-  impdp backup_user@ORCLPDB/Arley#1234 DIRECTORY=exp_schema DUMPFILE=exp_arley.dmp LOGFILE=imp_arley.log REMAP_SCHEMA=arleyribeiro:arley_novo REMAP_TABLESPACE=USERS:USERS
+  impdp usuario_backup_teste@ORCLPDB/Teste#1234 DIRECTORY=exp_schema DUMPFILE=exp_teste.dmp LOGFILE=imp_teste.log REMAP_SCHEMA=usuario_teste_secundario:teste_novo REMAP_TABLESPACE=USERS:USERS
 
   -- Executar Exportação de Tabela Específica:
-  expdp backup_user@ORCLPDB/Arley#1234 DIRECTORY=exp_schema DUMPFILE=exp_tabela.dmp LOGFILE=exp_tabela.log TABLES=arleyribeiro.minha_tabela2
+  expdp usuario_backup_teste@ORCLPDB/Teste#1234 DIRECTORY=exp_schema DUMPFILE=exp_tabela.dmp LOGFILE=exp_tabela.log TABLES=usuario_teste_secundario.minha_tabela2
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 6: PROCEDIMENTOS DE RECOVERY E RESTORE (DATABASE, TABLESPACE, DATAFILE)
---------------------------------------------------------------------------------
+/* PARTE 6 - PROCEDIMENTOS DE RECOVERY E RESTORE (DATABASE, TABLESPACE, DATAFILE) */
 
 /*
   -- 1. Restaurar Datafile danificado ou perdido:
@@ -205,28 +190,26 @@ GRANT DATAPUMP_EXP_FULL_DATABASE, DATAPUMP_IMP_FULL_DATABASE TO backup_user;
         }
 
   -- 4. Recovery de Tabela Específica via RMAN (Sem downtime no banco):
-  RMAN> RECOVER TABLE arleyribeiro.minha_tabela2 OF PLUGGABLE DATABASE ORCLPDB 
+  RMAN> RECOVER TABLE usuario_teste_secundario.minha_tabela2 OF PLUGGABLE DATABASE ORCLPDB 
           UNTIL TIME "TO_DATE('2026-07-20 10:00:00','YYYY-MM-DD HH24:MI:SS')"
           AUXILIARY DESTINATION 'C:\oraclebackup\pitr';
 */
 
 
---------------------------------------------------------------------------------
--- PARTE 7: AUTOMAÇÃO DE JOBS VIA DBMS_SCHEDULER
---------------------------------------------------------------------------------
+/* PARTE 7 - AUTOMAÇÃO DE JOBS VIA DBMS_SCHEDULER */
 
 CONNECT / AS SYSDBA;
 ALTER SESSION SET CONTAINER = ORCLPDB;
 
 -- Garantir que o Scheduler esteja ativo na instância
 BEGIN
-    DBMS_SCHEDULER.set_scheduler_attribute('SCHEDULER_DISABLED', 'FALSE');
+    DBMS_SCHEDULER.SET_SCHEDULER_ATTRIBUTE('SCHEDULER_DISABLED', 'FALSE');
 END;
 /
 
 -- Criar Job do Scheduler para chamada de script de backup
 BEGIN
-    DBMS_SCHEDULER.create_job (
+    DBMS_SCHEDULER.CREATE_JOB (
         job_name        => 'JOB_BACKUP_INCREMENTAL_L0',
         job_type        => 'EXECUTABLE',
         job_action      => 'C:\oraclebackup\scriptbackup\backuporcl0.cmd',
@@ -241,13 +224,13 @@ END;
 
 -- Alterar Atributos de um Job Existente (Início e Frequência)
 BEGIN
-    DBMS_SCHEDULER.set_attribute(
+    DBMS_SCHEDULER.SET_ATTRIBUTE(
         name      => 'JOB_BACKUP_INCREMENTAL_L0',
         attribute => 'start_date',
         value     => SYSTIMESTAMP + INTERVAL '1' MINUTE
     );
 
-    DBMS_SCHEDULER.set_attribute(
+    DBMS_SCHEDULER.SET_ATTRIBUTE(
         name      => 'JOB_BACKUP_INCREMENTAL_L0',
         attribute => 'repeat_interval',
         value     => 'FREQ=HOURLY; INTERVAL=1'
@@ -266,26 +249,28 @@ WHERE job_name = 'JOB_BACKUP_INCREMENTAL_L0';
 
 -- Interromper e Desativar Job
 BEGIN
-    DBMS_SCHEDULER.stop_job('JOB_BACKUP_INCREMENTAL_L0', FORCE => TRUE);
-    DBMS_SCHEDULER.disable('JOB_BACKUP_INCREMENTAL_L0');
+    DBMS_SCHEDULER.STOP_JOB('JOB_BACKUP_INCREMENTAL_L0', FORCE => TRUE);
+    DBMS_SCHEDULER.DISABLE('JOB_BACKUP_INCREMENTAL_L0');
 END;
 /
 
 -- Excluir Job do Scheduler
 BEGIN
-    DBMS_SCHEDULER.drop_job('JOB_BACKUP_INCREMENTAL_L0', FORCE => TRUE);
+    DBMS_SCHEDULER.DROP_JOB('JOB_BACKUP_INCREMENTAL_L0', FORCE => TRUE);
 END;
 /
 
 
---------------------------------------------------------------------------------
--- PARTE 8: LIMPEZA DOS OBJETOS DO LABORATÓRIO (CLEANUP)
---------------------------------------------------------------------------------
+/* PARTE 8 - LIMPEZA DOS OBJETOS DO LABORATÓRIO (CLEANUP) */
 
 CONNECT / AS SYSDBA;
 ALTER SESSION SET CONTAINER = ORCLPDB;
 
-DROP USER backup_user CASCADE;
-DROP USER rman_cat CASCADE;
+DROP USER usuario_backup_teste CASCADE;
+DROP USER c##rman_cat_teste CASCADE;
 DROP TABLESPACE tbs_rman_cat INCLUDING CONTENTS AND DATAFILES;
 DROP DIRECTORY exp_schema;
+
+/* PARTE 99 - CLEANUP */
+-- CONNECT / AS SYSDBA;
+-- ALTER SESSION SET CONTAINER = ORCLPDB;
